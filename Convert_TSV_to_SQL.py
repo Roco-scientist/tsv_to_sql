@@ -26,7 +26,7 @@ def arguments():
     return args
     
 
-def transform_tab(data, columns = True, data_types = None):
+def transform_tab(data, columns = True, is_char = None):
     '''
     Removes the tabs and replaces them with ","s which is needed for MySQL
     Also adds '`' to the column names
@@ -37,13 +37,21 @@ def transform_tab(data, columns = True, data_types = None):
         data = data.replace("\t","`,`")
         data = "`" + data + "`"
     else:
-        data = data.split("\t")
-        for x in range(len(data)):
-            if data_types[x].find("CHAR") > 0:
+        if len(is_char) > 0:
+            data = data.split("\t")
+            for x in is_char:
                 data[x] = "'" + data[x] + "'"
-        data = ",".join(data)
+            data = ",".join(data)
+        else:
+            data.replace("\t", ",")
     return data
 
+def is_character(data_types):
+    is_char = []
+    for x in range(len(data_types)):
+        if data_types[x].find("CHAR") > 0:
+            is_char.append(x)
+    return is_char
 
 def get_data(tsv_file, data_types):
     '''
@@ -51,11 +59,13 @@ def get_data(tsv_file, data_types):
     '''
     data = ""
     lines = 1
+    is_char = is_character(data_types)
     with open(tsv_file, "r") as tsv:
         tsv.readline()
         for line in tsv:
             lines += 1
-            data = data + "(" + transform_tab(line, columns = False, data_types = data_types) + "),\n"
+            data = data + "(" + transform_tab(line, columns = False, is_char = is_char) + "),\n"
+            print(str(lines)+ " lines imported")
     return data[:-2], lines
 
 def get_columns(tsv_file):
@@ -102,6 +112,7 @@ def run():
     '''
     args = arguments()
     columns, data_types = get_columns(args.TSV_file)
+    print("Column names imported")
     data, linecount = get_data(args.TSV_file, data_types)
     if args.sql_file is not None:
         filename = args.sql_file
@@ -111,7 +122,7 @@ def run():
         table_name = args.Table_name
     else:
         table_name = args.tsv_file[:args.TSV_file.upper().find(".TSV")]
-
+    print("Writing")
     write_file(filename, columns, data_types, data, linecount, table_name)
     
 if __name__ == "__main__":
