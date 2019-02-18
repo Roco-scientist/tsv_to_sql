@@ -31,7 +31,6 @@ def transform_tab(data):
     '''
     Removes the tabs and replaces them with ","s which is needed for MySQL
     Also adds '`' to the column names
-    For data values, adds "'"s to string columns and leaves number data without quotes
     '''
     data = data.replace("\n","")
     data = data.replace("\t","`,`")
