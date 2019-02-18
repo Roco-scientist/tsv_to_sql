@@ -7,6 +7,7 @@ Created on Sat Feb 16 13:57:27 2019
 """
 
 import argparse
+import csv
 '''
 This file converts TSV (tab separated files) to input files for MySQL
 Afterwards:
@@ -26,24 +27,15 @@ def arguments():
     return args
     
 
-def transform_tab(data, columns = True, is_char = None):
+def transform_tab(data):
     '''
     Removes the tabs and replaces them with ","s which is needed for MySQL
     Also adds '`' to the column names
     For data values, adds "'"s to string columns and leaves number data without quotes
     '''
     data = data.replace("\n","")
-    if columns:
-        data = data.replace("\t","`,`")
-        data = "`" + data + "`"
-    else:
-        if len(is_char) > 0:
-            data = data.split("\t")
-            for x in is_char:
-                data[x] = "'" + data[x] + "'"
-            data = ",".join(data)
-        else:
-            data.replace("\t", ",")
+    data = data.replace("\t","`,`")
+    data = "`" + data + "`"
     return data
 
 def is_character(data_types):
@@ -53,20 +45,29 @@ def is_character(data_types):
             is_char.append(x)
     return is_char
 
+def add_quotes(row, is_char):
+    for x in is_char:
+        row[x] = "'" + row[x] + "'"
+    return row
+
 def get_data(tsv_file, data_types):
     '''
     Creates the values input for MySQL which is () encapsulated per row with a "," afterwards
     '''
-    data = ""
-    lines = 1
+    tsv_data = []
     is_char = is_character(data_types)
     with open(tsv_file, "r") as tsv:
-        tsv.readline()
-        for line in tsv:
-            lines += 1
-            data = data + "(" + transform_tab(line, columns = False, is_char = is_char) + "),\n"
-            print(str(lines)+ " lines imported")
-    return data[:-2], lines
+        tsvreader = csv.reader(tsv, delimiter = "\t")
+        for row in tsvreader:
+            tsv_data.append(row)
+    tsv_data = tsv_data[1:]
+    for x in range(len(tsv_data)):
+        if len(is_char) > 0:
+            tsv_data[x] = add_quotes(tsv_data[x], is_char)
+        tsv_data[x] = ",".join(tsv_data[x])
+    data = "),\n(".join(tsv_data)
+    data = "(" + data + ")"
+    return data, len(tsv_data)
 
 def get_columns(tsv_file):
     '''
