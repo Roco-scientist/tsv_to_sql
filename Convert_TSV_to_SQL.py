@@ -19,10 +19,11 @@ def arguments():
     '''
     Gets the arguments from command line
     '''
-    parser = argparse.ArgumentParser(description = "Converts TSV file to MySQL importable file")
-    parser.add_argument("TSV_file", type = str, help = "TSV file to be converted (required)")
+    parser = argparse.ArgumentParser(description = "Converts TSV file to MySQL importable file", usage = "python %(prog)s [-options] <TSV_file>")
+    parser.add_argument("TSV_file", type = str, help = "file.tsv file to be converted (required)")
     parser.add_argument("-o", dest = 'sql_file', type = str, help = "SQL file name for output", required = False)
     parser.add_argument("-t", dest = "Table_name", type = str, help = "Table name for SQL import", required = False)
+    parser.add_argument("-p", dest = "primary_first", action = "store_true", default = False, help = "First column used as a primary key", required = False)
     args = parser.parse_args()
     return args
     
@@ -31,6 +32,7 @@ def transform_tab(data):
     '''
     Removes the tabs and replaces them with ","s which is needed for MySQL
     Also adds '`' to the column names
+    For data values, adds "'"s to string columns and leaves number data without quotes
     '''
     data = data.replace("\n","")
     data = data.replace("\t","`,`")
@@ -80,13 +82,13 @@ def get_columns(tsv_file):
     for value in data_types_start.split("\t"):
         try:
             float(value)
-            data_types.append("FLOAT(20)")
+            data_types.append("FLOAT")
         except ValueError:
             data_types.append("VARCHAR(20)")
     columns = transform_tab(columns)
     return columns, data_types
     
-def write_file(filename, columns, data_types, data, linecount, table_name):
+def write_file(filename, columns, data_types, data, linecount, table_name, primary_first):
     '''
     Pulls everything together to create an SQL input file
     '''
@@ -94,11 +96,18 @@ def write_file(filename, columns, data_types, data, linecount, table_name):
         file.write("DROP TABLE IF EXISTS "+ table_name +";\n")
         file.write("CREATE TABLE "+ table_name +"(\n")
         for x in range(len(columns.split(","))):
-            if x == (len(columns.split(",")) - 1):
-                end = "\n"
+            if x == 0:
+                if primary_first:
+                    file.write(columns.split(",")[x] + " "+ data_types[x] +" NOT NULL,\n")
+                else:
+                    file.write("id INT NOT NULL AUTO_INCREMENT,\n")
+                    file.write(columns.split(",")[x] + " "+ data_types[x] + ",\n")
             else:
-                end = ",\n"
-            file.write(columns.split(",")[x] + " "+ data_types[x] +" DEFAULT NULL" + end)
+                file.write(columns.split(",")[x] + " "+ data_types[x] + ",\n")
+        if primary_first:
+            file.write("PRIMARY KEY ( "+ columns.split(",")[0] +" )")
+        else:
+            file.write("PRIMARY KEY ( id )")
         file.write(");")
         file.write("\n\nINSERT INTO "+ table_name +"\n(")
         file.write(columns)
@@ -123,7 +132,7 @@ def run():
     else:
         table_name = args.tsv_file[:args.TSV_file.upper().find(".TSV")]
     print("Writing")
-    write_file(filename, columns, data_types, data, linecount, table_name)
+    write_file(filename, columns, data_types, data, linecount, table_name, args.primary_first)
     
 if __name__ == "__main__":
     run()
