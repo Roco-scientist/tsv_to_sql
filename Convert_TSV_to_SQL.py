@@ -21,9 +21,9 @@ def arguments():
     '''
     parser = argparse.ArgumentParser(description = "Converts TSV file to MySQL importable file", usage = "python %(prog)s [-options] <TSV_file>")
     parser.add_argument("TSV_file", type = str, help = "file.tsv file to be converted (required)")
-    parser.add_argument("-o", dest = 'sql_file', type = str, help = "SQL file name for output", required = False)
-    parser.add_argument("-t", dest = "Table_name", type = str, help = "Table name for SQL import", required = False)
-    parser.add_argument("-p", dest = "primary_first", action = "store_true", default = False, help = "First column used as a primary key", required = False)
+    parser.add_argument("-o", dest = 'sql_file', type = str, help = "SQL file name for output (default file.sql)", required = False)
+    parser.add_argument("-t", dest = "Table_name", type = str, help = "Table name for SQL import (default file)", required = False)
+    parser.add_argument("-p", dest = "primary_first", action = "store_true", default = False, help = "First column used as a primary key (default False)", required = False)
     args = parser.parse_args()
     return args
     
