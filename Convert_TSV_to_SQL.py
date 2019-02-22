@@ -55,12 +55,9 @@ def get_data(tsv_file, data_types):
     '''
     Creates the values input for MySQL which is () encapsulated per row with a "," afterwards
     '''
-    #tsv_data = []
     is_char = is_character(data_types)
     with open(tsv_file, "r") as tsv:
         tsvreader = csv.reader(tsv, delimiter = "\t")
-        #for row in tsvreader:
-        #    tsv_data.append(row)
         tsv_data = list(tsvreader)
     tsv_data = tsv_data[1:]
     for x in range(len(tsv_data)):
