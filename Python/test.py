@@ -19,7 +19,7 @@ class TestTransformTab(unittest.TestCase):
         self.assertEqual(convert_TSV_to_SQL.transform_tab(self.tsv_data[0]),
                          "`one`,`two`,`three`")
         self.assertEqual(convert_TSV_to_SQL.get_column_headers(self.tsv_data),
-                         ("`one`,`two`,`three`", ["FLOAT", "VARCHAR(20)", "FLOAT"]))
+                         ("`one`,`two`,`three`", self.data_types))
 
     def test_get_data(self):
         self.assertEqual(convert_TSV_to_SQL.get_data(self.tsv_data, self.data_types),
