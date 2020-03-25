@@ -60,7 +60,7 @@ def add_quotes(row: List[str], char_index: List[int]) -> List[str]:
     return row
 
 
-def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int]:
+def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int, List[int]]:
     '''
     Creates the values input for MySQL which is () encapsulated per row with a "," afterwards
     :tsv_file:
@@ -70,13 +70,19 @@ def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int]:
     data_no_headers = [row.split("\t") for row in tsv_data[1:]]
     data_joined = []
     char_index = [x for x, data_type in enumerate(data_types) if "CHAR" in data_type]
+    int_index = [x for x, data_type in enumerate(data_types) if "INT" in data_type]
+    not_really_int = []
     for row in data_no_headers:
         if len(char_index):
             row = add_quotes(row, char_index)
+        if len(int_index):
+            for x in int_index:
+                if int(row[x]) != row[x]:
+                    not_really_int.append(x)
         data_joined.append(",".join(row))
     data = "),\n(".join(data_joined)
     data = f"({data})"
-    return data, len(data_no_headers)
+    return data, len(data_no_headers), not_really_int
 
 
 def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
@@ -92,7 +98,10 @@ def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
     for value in data_types_start.split("\t"):
         try:
             float(value)
-            data_types.append("FLOAT")
+            if int(value) == value:
+                data_types.append("INT")
+            else:
+                data_types.append("FLOAT")
         except ValueError:
             data_types.append("VARCHAR(20)")
     column_headers = transform_tab(column_headers)
@@ -142,7 +151,10 @@ def main():
         tsv_data = file_data.read().splitlines()
     column_headers, data_types = get_column_headers(tsv_data)
     print("Column names imported")
-    data, linecount = get_data(tsv_data, data_types)
+    data, linecount, not_really_int = get_data(tsv_data, data_types)
+    if not_really_int:
+        for x in not_really_int:
+            data_types[x] = "FLOAT"
     if args.sql_file is not None:
         filename = args.sql_file
     else:
