@@ -3,9 +3,9 @@ extern crate clap;
 use clap::{App, Arg};
 use std::fs;
 use std::fs::File;
-use std::process;
-use std::path::Path;
 use std::io::prelude::*;
+use std::path::Path;
+use std::process;
 
 pub fn get_file_path() -> String {
     let matches = App::new("CSV/TSV to SQL converter")
@@ -17,7 +17,7 @@ pub fn get_file_path() -> String {
                 .short("f")
                 .long("file")
                 .takes_value(true)
-                .help("TSV or CSV file")
+                .help("TSV or CSV file"),
         )
         .get_matches();
 
@@ -28,7 +28,6 @@ pub fn get_file_path() -> String {
             process::exit(1);
         }
     }
-
 }
 
 enum Filetype {
@@ -41,7 +40,7 @@ pub struct InputFile {
     header: String,
     first_row: String,
     body: String,
-    filetype: Filetype
+    filetype: Filetype,
 }
 
 impl InputFile {
@@ -88,19 +87,47 @@ impl InputFile {
             filetype,
         }
     }
+
     pub fn reform_header(&mut self) -> () {
         // for input into SQL the header needs to be reformatted with `` and comma separated
-        let sep = match self.filetype {
-            Filetype::CSV => ",",
-            Filetype::TSV => "\t",
-        };
+        let sep = self.separator();
 
         // replaces tabs or commas with `,`
         // also encapselates the whole header with ``
-        let mut reformed_header = self.header.replace(sep, "`,`");
+        let mut reformed_header = self.header.replace(&sep, "`,`");
         reformed_header.push_str("`");
         let data_preceder = String::from("`");
         self.header = data_preceder + &reformed_header;
+    }
+
+    pub fn reform_body(&mut self) -> () {
+        //
+    }
+
+    fn infer_col_data_types(&self) -> Vec<String> {
+        let sep = self.separator();
+        let first_row_values: Vec<&str> = self.first_row.split(&sep).collect();
+        let mut data_types = Vec::new();
+
+        for cell in first_row_values {
+            if let Ok(value) = cell.parse::<f32>() {
+                if value.round() == value {
+                    data_types.push("INT".to_string())
+                } else {
+                    data_types.push("FLOAT".to_string())
+                }
+            } else {
+                data_types.push("VARCHAR(20)".to_string())
+            }
+        }
+        return data_types;
+    }
+
+    fn separator(&self) -> String {
+        match self.filetype {
+            Filetype::CSV => ",".to_string(),
+            Filetype::TSV => "\t".to_string(),
+        }
     }
 }
 
@@ -126,5 +153,10 @@ mod tests {
         let mut test_input = InputFile::load_file("test.csv");
         test_input.reform_header();
         assert_eq!(test_input.header, "`one`,`two`,`three`".to_string());
+    }
+    #[test]
+    fn test_return_data_types() {
+        let mut test_input = InputFile::load_file("test.csv");
+        assert_eq!(test_input.infer_col_data_types(), vec!["VARCHAR(20)".to_string(), "INT".to_string(), "FLOAT".to_string()])
     }
 }
