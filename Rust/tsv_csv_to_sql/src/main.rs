@@ -1,26 +1,15 @@
-extern crate clap;
-
+use tsv_csv_to_sql;
 use std::process;
-use clap::{App, Arg};
 
 fn main() {
-    let matches = App::new("CSV/TSV to SQL converter")
-        .version("0.1.0")
-        .author("Rory Coffey <coffeyrt@gmail.com>")
-        .about("Takes in a TSV/CSV file and outputs in a SQL import format")
-        .arg(
-            Arg::with_name("file")
-                .short("f")
-                .long("file")
-                .takes_value(true)
-                .help("TSV or CSV file")
-        )
-        .get_matches();
-    let file_path = match matches.value_of("file") {
-        Some(file) => file,
-        None => {
-            eprintln!("Missing file argument: --file <file>");
-            process::exit(1);
-        }
-    };
+    let file_path = tsv_csv_to_sql::get_file_path();
+    let mut input_file = tsv_csv_to_sql::InputFile::load_file(&file_path);
+    input_file.reform_header();
+    match tsv_csv_to_sql::write_sql_input(&input_file) {
+        Err(msg) => {
+            eprintln!("Error found while writing: {:?}", msg);
+            process::exit(1)
+        },
+        Ok(_) => println!("SQL file written"),
+    }
 }
