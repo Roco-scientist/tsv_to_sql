@@ -2,10 +2,11 @@ use tsv_csv_to_sql;
 use std::process;
 
 fn main() {
-    let file_path = tsv_csv_to_sql::get_file_path();
+    let (file_path, table_name) = tsv_csv_to_sql::arguments();
     let mut input_file = tsv_csv_to_sql::InputFile::load_file(&file_path);
     input_file.reform_header();
-    match tsv_csv_to_sql::write_sql_input(&input_file) {
+    input_file.infer_col_data_types();
+    match tsv_csv_to_sql::write_sql_input(&input_file, &table_name) {
         Err(msg) => {
             eprintln!("Error found while writing: {:?}", msg);
             process::exit(1)

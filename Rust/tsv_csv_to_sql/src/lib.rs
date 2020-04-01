@@ -7,8 +7,8 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::process;
 
-pub fn get_file_path() -> String {
-    let matches = App::new("CSV/TSV to SQL converter")
+pub fn arguments() -> (String, String) {
+    let args = App::new("CSV/TSV to SQL converter")
         .version("0.1.0")
         .author("Rory Coffey <coffeyrt@gmail.com>")
         .about("Takes in a TSV/CSV file and outputs in a SQL import format")
@@ -17,17 +17,27 @@ pub fn get_file_path() -> String {
                 .short("f")
                 .long("file")
                 .takes_value(true)
+                .required(true)
                 .help("TSV or CSV file"),
         )
+        .arg(
+            Arg::with_name("table_name")
+                .short("t")
+                .long("table_name")
+                .takes_value(true)
+                .required(true)
+                .help("The name to give the table within SQL"),
+        )
         .get_matches();
-
-    match matches.value_of("file") {
-        Some(file) => file.to_string(),
-        None => {
-            eprintln!("Missing file argument: --file <file>");
-            process::exit(1);
-        }
-    }
+    let mut file_path = String::new();
+    let mut table_name = String::new();
+    if let Some(file) = args.value_of("file") {
+        file_path = file.to_string()
+    };
+    if let Some(table) = args.value_of("table_name") {
+        table_name = table.to_string()
+    };
+    return (file_path, table_name);
 }
 
 enum Filetype {
@@ -104,7 +114,7 @@ impl InputFile {
         //
     }
 
-    fn infer_col_data_types(&self) -> Vec<String> {
+    pub fn infer_col_data_types(&self) -> Vec<String> {
         let sep = self.separator();
         let first_row_values: Vec<&str> = self.first_row.split(&sep).collect();
         let mut data_types = Vec::new();
@@ -120,7 +130,7 @@ impl InputFile {
                 data_types.push("VARCHAR(20)".to_string())
             }
         }
-        return data_types;
+        data_types
     }
 
     fn separator(&self) -> String {
@@ -131,10 +141,30 @@ impl InputFile {
     }
 }
 
-pub fn write_sql_input(input_file: &InputFile) -> std::io::Result<()> {
+pub fn write_sql_input(input_file: &InputFile, table_name: &str) -> std::io::Result<()> {
     let path = Path::new("test.sql");
     let mut file = File::create(&path)?;
+    let data_types = input_file.infer_col_data_types();
+
+    file.write_all(format!("DROP TABLE IF EXISTS {};\n", &table_name).as_bytes())?;
+    file.write_all(format!("CREATE TABLE {}(\n", &table_name).as_bytes())?;
+    file.write_all("id INT NOT NULL AUTO_INCREMENT, \n".as_bytes())?;
+
+    for (header, data_type) in input_file
+        .header
+        .split(",")
+        .zip(data_types.iter())
+    {
+        file.write_all(format!("{} {},\n", header, data_type).as_bytes())?
+    }
+
+    file.write_all("PRIMARY KEY ( id ));\n\n".as_bytes())?;
+    file.write_all(format!("INSERT INTO {}\n(", &table_name).as_bytes())?;
     file.write_all(input_file.header.as_bytes())?;
+    file.write_all(")\nVALUES\n".as_bytes())?;
+    file.write_all(input_file.body.as_bytes())?;
+    file.write_all(";".as_bytes())?;
+
     Ok(())
 }
 
@@ -157,6 +187,13 @@ mod tests {
     #[test]
     fn test_return_data_types() {
         let mut test_input = InputFile::load_file("test.csv");
-        assert_eq!(test_input.infer_col_data_types(), vec!["VARCHAR(20)".to_string(), "INT".to_string(), "FLOAT".to_string()])
+        assert_eq!(
+            test_input.infer_col_data_types(),
+            vec![
+                "VARCHAR(20)".to_string(),
+                "INT".to_string(),
+                "FLOAT".to_string()
+            ]
+        )
     }
 }
