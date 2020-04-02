@@ -11,7 +11,6 @@ Afterwards:
 """
 
 import argparse
-import csv
 import sys
 
 from typing import List, Tuple
@@ -35,17 +34,17 @@ def arguments():
     return args
 
 
-def transform_tab(data: str) -> str:
+def transform_tab(column_row: str) -> str:
     '''
-    Removes the tabs and replaces them with ","s which is needed for MySQL
+    Removes the tabs in the column headers and replaces them with ","s which is needed for MySQL
     Also adds '`' to the column names
     For data values, adds "'"s to string columns and leaves number data without quotes
-    :data: 
+    :column_row: 
     :return: reformed data
     '''
-    data = data.replace("\t", "`,`")
-    data = f"`{data}`"
-    return data
+    column_row = column_row.replace("\t", "`,`")
+    column_row = f"`{column_row}`"
+    return column_row
 
 
 def add_quotes(row: List[str], char_index: List[int]) -> List[str]:
@@ -63,8 +62,8 @@ def add_quotes(row: List[str], char_index: List[int]) -> List[str]:
 def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int, List[int]]:
     '''
     Creates the values input for MySQL which is () encapsulated per row with a "," afterwards
-    :tsv_file:
-    :data_types:
+    :tsv_file: tsv data that was imported
+    :data_types: The datatypes of the columns
     :return:
     '''
     data_no_headers = [row.split("\t") for row in tsv_data[1:]]
@@ -77,7 +76,7 @@ def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int, List[int]]
             row = add_quotes(row, char_index)
         if len(int_index):
             for x in int_index:
-                if int(row[x]) != row[x]:
+                if int(float(row[x])) != float(row[x]):
                     not_really_int.append(x)
         data_joined.append(",".join(row))
     data = "),\n(".join(data_joined)
@@ -89,8 +88,8 @@ def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
     '''
     Gets the column names for MySQL input
     Also finds whether each column is a string or a number
-    :tsv_file:
-    :return:
+    :tsv_data: data frame imported
+    :return: two lists of column headers and data types
     '''
     column_headers = tsv_data[0]
     data_types_start = tsv_data[1]
@@ -98,7 +97,8 @@ def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
     for value in data_types_start.split("\t"):
         try:
             float(value)
-            if int(value) == value:
+            new_value = float(value)
+            if int(new_value) == new_value:
                 data_types.append("INT")
             else:
                 data_types.append("FLOAT")
@@ -109,16 +109,16 @@ def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
 
 
 def write_file(filename: str, column_headers: str, data_types: List[str], data: str, linecount: int,
-               table_name: str, primary_first):
+               table_name: str, primary_first: bool):
     '''
     Pulls everything together to create an SQL input file
-    :filename:
-    :column_headers:
-    :data_types:
+    :filename: the output sql filename
+    :column_headers: self explanatory
+    :data_types: list of column data types
     :data: refurmed data into sql format for import
     :linecount: number of lines in TSV file/database
-    :table_name:
-    :primary_first:
+    :table_name: the table name to be used within SQL
+    :primary_first: Whether or not the first column will be the key
     :return:
     '''
     with open(filename, "w+") as file:
@@ -164,7 +164,8 @@ def main():
     else:
         table_name = args.TSV_file[:args.TSV_file.upper().find(".TSV")]
     print("Writing")
-    write_file(filename, column_headers, data_types, data, linecount, table_name, args.primary_first)
+    write_file(filename, column_headers, data_types, data,
+               linecount, table_name, args.primary_first)
 
 
 if __name__ == "__main__":
