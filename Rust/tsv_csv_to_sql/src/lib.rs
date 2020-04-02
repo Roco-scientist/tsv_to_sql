@@ -223,13 +223,18 @@ impl InputFile {
         let first_row_values: Vec<&str> = self.first_row.split(&sep).collect();
         let mut data_types = Vec::new();
 
+        //Find what data type the first row contains
         for cell in first_row_values {
+            // check if it can be a number
             if let Ok(value) = cell.parse::<f32>() {
+                // check if the number is an integer.  round(2.0) == 2
                 if value.round() == value {
                     data_types.push("INT".to_string())
                 } else {
+                    // if not integer then a float
                     data_types.push("FLOAT".to_string())
                 }
+                // if not a number, then a character string
             } else {
                 data_types.push("VARCHAR(20)".to_string())
             }
@@ -248,6 +253,7 @@ impl InputFile {
             Filetype::CSV => ",".to_string(),
             Filetype::TSV => "\t".to_string(),
         };
+        // check if the text contains the separator indicated by the file type
         if self.text.contains(&sep) {
             return sep;
         } else {
