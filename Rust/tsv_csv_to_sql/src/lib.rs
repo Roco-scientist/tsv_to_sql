@@ -273,6 +273,11 @@ impl InputFile {
 ///input_data.reform_body();
 ///tsv_csv_to_sql::write_sql_input(&input_data, &table_name, &output_file);
 ///```
+///
+///to import into SQL:
+///```c
+///mysql -u <username> -p < <sql_file>
+///```
 pub fn write_sql_input(
     input_file: &InputFile,
     table_name: &str,
