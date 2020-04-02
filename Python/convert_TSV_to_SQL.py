@@ -11,7 +11,6 @@ Afterwards:
 """
 
 import argparse
-import csv
 import sys
 
 from typing import List, Tuple
@@ -77,7 +76,7 @@ def get_data(tsv_data: str, data_types: List[str]) -> Tuple[str, int, List[int]]
             row = add_quotes(row, char_index)
         if len(int_index):
             for x in int_index:
-                if int(row[x]) != row[x]:
+                if int(float(row[x])) != float(row[x]):
                     not_really_int.append(x)
         data_joined.append(",".join(row))
     data = "),\n(".join(data_joined)
@@ -98,7 +97,8 @@ def get_column_headers(tsv_data: str) -> Tuple[str, List[str]]:
     for value in data_types_start.split("\t"):
         try:
             float(value)
-            if int(value) == value:
+            new_value = float(value)
+            if int(new_value) == new_value:
                 data_types.append("INT")
             else:
                 data_types.append("FLOAT")
