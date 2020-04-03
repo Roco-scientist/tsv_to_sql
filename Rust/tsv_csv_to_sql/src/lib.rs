@@ -67,21 +67,10 @@ impl InputFile {
         };
 
         // splits out the header, first row, and the body of the data file for future parsing
-        let mut header = String::new();
-        let mut first_row = String::new();
-        let mut body = Vec::new();
-        for (x, line) in text.lines().enumerate() {
-            if x == 0 {
-                header = line.to_string()
-            };
-            if x == 1 {
-                first_row = line.to_string();
-                body.push(line.to_string())
-            };
-            if x > 1 {
-                body.push(line.to_string())
-            };
-        }
+        let mut contents = text.lines();
+        let header = contents.next().unwrap().to_string();
+        let body = contents.map(|line| line.to_string()).collect::<Vec<String>>();
+        let first_row = body[0].clone();
 
         // returns
         InputFile {
