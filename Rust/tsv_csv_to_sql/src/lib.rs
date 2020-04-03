@@ -1,76 +1,24 @@
-extern crate clap;
-
-use clap::{App, Arg};
 use std::fs::File;
 use std::io::prelude::*;
 use std::{fs, process};
 
-/// Gets the command line arguments and returns the file, table name, and output file name
-pub fn arguments() -> (String, String, String) {
-    let args = App::new("CSV/TSV to SQL converter")
-        .version("0.1.0")
-        .author("Rory Coffey <coffeyrt@gmail.com>")
-        .about("Takes in a TSV/CSV file and outputs in a SQL import format")
-        .arg(
-            Arg::with_name("file")
-                .short("f")
-                .long("file")
-                .takes_value(true)
-                .required(true)
-                .help("TSV or CSV file"),
-        )
-        .arg(
-            Arg::with_name("table_name")
-                .short("t")
-                .long("table_name")
-                .takes_value(true)
-                .required(true)
-                .help("The name to give the table within SQL"),
-        )
-        .arg(
-            Arg::with_name("output_file")
-                .short("o")
-                .long("output_file")
-                .takes_value(true)
-                .required(true)
-                .help("The name wanted for the output file. Typically file.sql"),
-        )
-        .get_matches();
-    let mut file_path = String::new();
-    let mut table_name = String::new();
-    let mut output_file = String::new();
-    // assigns command line input -f to file_path
-    if let Some(file) = args.value_of("file") {
-        file_path = file.to_string()
-    };
-    // assigns command line input -t to table_name
-    if let Some(table) = args.value_of("table_name") {
-        table_name = table.to_string()
-    };
-    // assigns command line input -o to output_file
-    if let Some(table) = args.value_of("output_file") {
-        output_file = table.to_string()
-    };
-    return (file_path, table_name, output_file);
-}
-
-///A private enum created for labeling input files as either TSV or CSV
+/// A private enum created for labeling input files as either TSV or CSV
 ///
 enum Filetype {
     CSV,
     TSV,
 }
 
-///A struct for structering the CSV or TSV data in order to be converted to SQL
+/// A struct for structering the CSV or TSV data in order to be converted to SQL
 ///
-///#Examples
+/// #Examples
 ///
-///```
-///use tsv_csv_to_sql::InputFile;
+/// ```
+/// use tsv_csv_to_sql::InputFile;
 ///
-///let file_path = "test.csv";
-///let input_data = InputFile::load_file(file_path);
-///```
+/// let file_path = "test.csv";
+/// let input_data = InputFile::load_file(file_path);
+/// ```
 pub struct InputFile {
     text: String,      //The input text body.  Used for testing
     header: String,    //Column header or the first row of the CSV/TSV file
@@ -79,29 +27,29 @@ pub struct InputFile {
     filetype: Filetype,
 }
 
-///Methods attached to InputFile for creating and editing for output to SQL input format
+/// Methods attached to InputFile for creating and editing for output to SQL input format
 ///
-///#Examples
+/// #Examples
 ///
-///```
-///use tsv_csv_to_sql;
+/// ```
+/// use tsv_csv_to_sql;
 ///
-///let file_path = "test.csv";
-///let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-///input_data.reform_header();
-///input_data.reform_body();
-///```
+/// let file_path = "test.csv";
+/// let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+/// input_data.reform_header();
+/// input_data.reform_body();
+/// ```
 impl InputFile {
-    ///loads the file and formats it for the InputFile struct
+    /// loads the file and formats it for the InputFile struct
     ///
-    ///#Examples
+    /// #Examples
     ///
-    ///```
-    ///use tsv_csv_to_sql;
+    /// ```
+    /// use tsv_csv_to_sql;
     ///
-    ///let file_path = "test.csv";
-    ///let input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-    ///```
+    /// let file_path = "test.csv";
+    /// let input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+    /// ```
     pub fn load_file(file_path: &str) -> InputFile {
         let text = fs::read_to_string(file_path).unwrap_or_else(|error| {
             eprintln!("Unable to open file error: {:?}", error);
@@ -145,17 +93,17 @@ impl InputFile {
         }
     }
 
-    ///Reforms the column headers to be comma separated and `` encapselated for SQL input requirements
+    /// Reforms the column headers to be comma separated and `` encapselated for SQL input requirements
     ///
-    ///#Examples
+    /// #Examples
     ///
-    ///```
-    ///use tsv_csv_to_sql;
+    /// ```
+    /// use tsv_csv_to_sql;
     ///
-    ///let file_path = "test.csv";
-    ///let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-    ///input_data.reform_header();
-    ///```
+    /// let file_path = "test.csv";
+    /// let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+    /// input_data.reform_header();
+    /// ```
     pub fn reform_header(&mut self) -> () {
         let sep = self.separator();
 
@@ -167,21 +115,21 @@ impl InputFile {
         self.header = data_preceder + &reformed_header;
     }
 
-    ///Reforms the body of the dataframe to be a SQL format input
+    /// Reforms the body of the dataframe to be a SQL format input
     ///
-    ///String are encapselated by '', while numerics are not
-    ///Also comma separtes the cells
-    ///Returns so that each row is a String within a Vec
+    /// String are encapselated by '', while numerics are not
+    /// Also comma separtes the cells
+    /// Returns so that each row is a String within a Vec
     ///
-    ///#Examples
+    /// #Examples
     ///
-    ///```
-    ///use tsv_csv_to_sql;
+    /// ```
+    /// use tsv_csv_to_sql;
     ///
-    ///let file_path = "test.csv";
-    ///let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-    ///input_data.reform_body();
-    ///```
+    /// let file_path = "test.csv";
+    /// let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+    /// input_data.reform_body();
+    /// ```
     pub fn reform_body(&mut self) -> () {
         let data_types = self.infer_col_data_types();
         let sep = self.separator();
@@ -203,21 +151,21 @@ impl InputFile {
         self.body = new_body
     }
 
-    ///Infors the datatypes from the first row of the database
+    /// Infors the datatypes from the first row of the database
     ///
-    ///This may lead to errors in the future based on the integer checking.  A float of 3.0 will be
-    ///called an integer, which will impact lower rows. Kept public because this method is also
-    ///used during file writing.
+    /// This may lead to errors in the future based on the integer checking.  A float of 3.0 will be
+    /// called an integer, which will impact lower rows. Kept public because this method is also
+    /// used during file writing.
     ///
-    ///#Examples
+    /// #Examples
     ///
-    ///```
-    ///use tsv_csv_to_sql;
+    /// ```
+    /// use tsv_csv_to_sql;
     ///
-    ///let file_path = "test.csv";
-    ///let input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-    ///input_data.infer_col_data_types();
-    ///```
+    /// let file_path = "test.csv";
+    /// let input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+    /// input_data.infer_col_data_types();
+    /// ```
     pub fn infer_col_data_types(&self) -> Vec<String> {
         let sep = self.separator();
         let first_row_values: Vec<&str> = self.first_row.split(&sep).collect();
@@ -234,7 +182,7 @@ impl InputFile {
                     // if not integer then a float
                     data_types.push("FLOAT".to_string())
                 }
-                // if not a number, then a character string
+            // if not a number, then a character string
             } else {
                 data_types.push("VARCHAR(20)".to_string())
             }
@@ -242,12 +190,12 @@ impl InputFile {
         data_types
     }
 
-    ///An internal method to find the separator used based on the Filetype
+    /// An internal method to find the separator used based on the Filetype
     ///
-    ///#Panics
+    /// #Panics
     ///
-    ///Exits if the file type detected, TSV or CSV, does not contain any separators which these
-    ///types indicate, ie \t or ","
+    /// Exits if the file type detected, TSV or CSV, does not contain any separators which these
+    /// types indicate, ie \t or ","
     fn separator(&self) -> String {
         let sep = match self.filetype {
             Filetype::CSV => ",".to_string(),
@@ -263,27 +211,27 @@ impl InputFile {
     }
 }
 
-///Writes an sql file which can be used to input into an SQL database using InputFile after being
-///reformed
+/// Writes an sql file which can be used to input into an SQL database using InputFile after being
+/// reformed
 ///
-///#Examples
+/// #Examples
 ///
-///```
-///use tsv_csv_to_sql;
+/// ```
+/// use tsv_csv_to_sql;
 ///
-///let file_path = "test.csv";
-///let output_file = "test.sql";
-///let table_name = "test";
-///let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
-///input_data.reform_header();
-///input_data.reform_body();
-///tsv_csv_to_sql::write_sql_input(&input_data, &table_name, &output_file);
-///```
+/// let file_path = "test.csv";
+/// let output_file = "test.sql";
+/// let table_name = "test";
+/// let mut input_data = tsv_csv_to_sql::InputFile::load_file(file_path);
+/// input_data.reform_header();
+/// input_data.reform_body();
+/// tsv_csv_to_sql::write_sql_input(&input_data, &table_name, &output_file);
+/// ```
 ///
-///to import into SQL:
-///```c
-///mysql -u <username> -p < <sql_file>
-///```
+/// to import into SQL:
+/// ```c
+/// mysql -u <username> -p < <sql_file>
+/// ```
 pub fn write_sql_input(
     input_file: &InputFile,
     table_name: &str,
